@@ -89,7 +89,10 @@ if (!url) {
 }
 
 (async () => {
-    const browser = await puppeteer.launch({ headless: !program.show });
+    const browser = await puppeteer.launch({
+        headless: !program.show,
+        ignoreHTTPSErrors: true,
+    });
     const page = await browser.newPage();
     try {
         await screenshot(page);
