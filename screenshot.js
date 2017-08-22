@@ -61,7 +61,6 @@ function screenshot(page) {
             } catch(e) {
                 if (n > 0) {
                     setTimeout(() => {
-                        console.log('retry', n);
                         transaction(n - 1);
                     }, 1000);
                 } else {
