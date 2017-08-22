@@ -54,6 +54,17 @@ function screenshot(url) {
                     headless: !program.show,
                 });
                 const page = await browser.newPage();
+
+                // disable inline script by document.write of top frame
+                await page.evaluateOnNewDocument(() => {
+                    Document.prototype._write = Document.prototype.write;
+                    Document.prototype.write = function (string) {
+                        if (window === window.top) {
+                            return;
+                        }
+                        this._write(string);
+                    };
+                });
                 await page.emulate(devices[program.emulate]);
                 await page.goto(url, {
                     waitUntil: 'networkidle',
