@@ -44,10 +44,16 @@ function validRetry(count) {
     return n;
 }
 
-function screenshot(page) {
+function screenshot(url) {
     return new Promise(async (resolve, reject) => {
+        let browser;
         const transaction = async (n) => {
             try {
+                browser = await puppeteer.launch({
+                    ignoreHTTPSErrors: true,
+                    headless: !program.show,
+                });
+                const page = await browser.newPage();
                 await page.emulate(devices[program.emulate]);
                 await page.goto(url, {
                     waitUntil: 'networkidle',
@@ -65,6 +71,11 @@ function screenshot(page) {
                     }, 1000);
                 } else {
                     reject(e);
+                }
+            } finally {
+                if (browser) {
+                    browser.close();
+                    browser = null;
                 }
             }
         };
@@ -88,16 +99,9 @@ if (!url) {
 }
 
 (async () => {
-    const browser = await puppeteer.launch({
-        headless: !program.show,
-        ignoreHTTPSErrors: true,
-    });
-    const page = await browser.newPage();
     try {
-        await screenshot(page);
+        await screenshot(url);
     } catch (e) {
         onError(e);
-    } finally {
-        browser.close();
     }
 })();
