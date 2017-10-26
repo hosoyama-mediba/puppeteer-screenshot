@@ -44,8 +44,16 @@ function validRetry(count) {
     return n;
 }
 
+function validThreshold(percentage) {
+    var n = Number(percentage);
+    if (!n || n < 0 || n > 100) {
+        return onError(new TypeError(`invalid threshold percentage "${percentage}"`));
+    }
+    return n;
+}
+
 function screenshot(url, filename) {
-    console.log(`Screenshot ${url} to ${program.output}/${filename}`);
+    console.log(`Screenshot: ${url} to ${program.output}/${filename}.jpg`);
     return new Promise(async (resolve, reject) => {
         let browser;
         const transaction = async (n) => {
@@ -65,6 +73,7 @@ function screenshot(url, filename) {
                         }
                         this._write(string);
                     };
+                    window.localStorage.clear();
                 });
                 await page.emulate(devices[program.emulate]);
                 await page.goto(url, {
@@ -102,6 +111,7 @@ program
     .option('-o, --output <path>', 'path to output directory. defualts to "files"', validOutput, `${__dirname}/files`)
     .option('-r, --retry <count>', 'retry count defaults to "0"', validRetry, 0)
     .option('-s, --show', 'show browser window for debug', false)
+    .option('-t, --threshold <percentage>', 'diff threshold. defualts to "25"', validThreshold, 25)
     .parse(process.argv)
 ;
 
@@ -111,26 +121,27 @@ if (!beforeUrl || !afterUrl) {
 }
 
 async function diffshot(before, after, diff) {
-    console.log(`Diff to ${program.output}/${diff}.jpg`);
+    console.log(`Diff: to ${program.output}/${diff}.jpg`);
     const data = await compareImages(
         fs.readFileSync(`${program.output}/${before}.jpg`),
         fs.readFileSync(`${program.output}/${after}.jpg`),
     );
     fs.writeFileSync(`${program.output}/${diff}.jpg`, data.getBuffer());
+    console.log('Complete:', data);
+    if (Number(data.misMatchPercentage) > program.threshold) {
+        throw new Error(data);
+    }
 }
 
-try {
-    const before = 'before';
-    const after = 'after';
-    const diff = 'diff';
-    Promise.all([
-        screenshot(beforeUrl, before),
-        screenshot(afterUrl, after),
-    ]).then(() => {
-        diffshot(before, after, diff);
-    }).catch((e) => {
-        onError(e);
-    });
-} catch (e) {
+const before = 'before';
+const after = 'after';
+const diff = 'diff';
+
+Promise.all([
+    screenshot(beforeUrl, before),
+    screenshot(afterUrl, after),
+]).then(() => {
+    return diffshot(before, after, diff);
+}).catch((e) => {
     onError(e);
-}
+});
